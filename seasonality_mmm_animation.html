@@ -708,19 +708,23 @@
         }
 
         // Controls
-        ['seasonality', 'campaign', 'baseline', 'noise', 'speedControl'].forEach(id => {
+        ['seasonality', 'campaign', 'baseline', 'noise'].forEach(id => {
             const elem = document.getElementById(id);
             if (elem) {
                 elem.addEventListener('input', () => {
-                    if (id === 'speedControl') {
-                        const speedVal = parseFloat(elem.value);
-                        document.getElementById('speed-value').textContent = speedVal.toFixed(1) + 'x';
-                    } else {
-                        generateSpends();
-                    }
+                    // Regenerate data when parameters change
                 });
             }
         });
+
+        // Speed control (just updates display, doesn't regenerate)
+        const speedElem = document.getElementById('speedControl');
+        if (speedElem) {
+            speedElem.addEventListener('input', () => {
+                const speedVal = parseFloat(speedElem.value);
+                document.getElementById('speed-value').textContent = speedVal.toFixed(1) + 'x';
+            });
+        }
 
         // RUN ALL button
         let isRunningAll = false;

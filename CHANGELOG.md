@@ -2,6 +2,36 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.0] - 2026-10-07
+
+### Added
+- **v1.1 Data Generation** (`SyntheticMMMDataset(level="v1.1", n_weeks=52)`)
+  - 52-week realistic dynamics with full-year seasonality patterns
+  - 5 channels: TV (0.85 decay), Search (0.30), Social (0.50), Display (0.65), Affiliate (0.20)
+  - Multiple seasonality peaks: Valentine's (0.4x), Easter (0.6x), Prime Day (0.8x), Summer (-0.2x), Halloween (0.8x), Black Friday (1.2x), Christmas (1.5x)
+  - Trend breaks: +10% at week 21 (launch), -5% at week 36 (constraint), recovery +7% from week 37
+  - Heteroscedastic noise scaling with baseline sales
+  - 7 campaign patterns overlapping with seasonal events for high confounding
+
+- **v1.1 Example** (`examples/52week_regression.py`)
+  - End-to-end workflow for 52-week data
+  - Linear regression validation showing identifiability challenges
+  - Component decomposition accuracy (MAPE) analysis
+  - Demonstrates why more sophisticated models needed for realistic datasets
+
+### Changed
+- **Refactored SyntheticMMMDataset** for version support
+  - `__init__` now accepts `level` parameter ("v1.0" or "v1.1")
+  - `generate()` dispatches to version-specific handlers
+  - v1.0 backward compatible with all existing code
+  - Extracted `_apply_adstock()` and `_apply_saturation()` as shared methods
+
+### Tested
+- v1.0: All 13 existing tests passing
+- v1.1: Data generation, shape validation, decomposition accuracy, reproducibility
+
+---
+
 ## [1.0.0] - 2026-10-06
 
 ### Added

@@ -239,6 +239,136 @@ This makes **identifiability** a real challenge:
 
 ---
 
+## Version 1.1: 52-Week Realistic Dynamics
+
+### Overview
+
+v1.1 extends v1.0 with realistic complexity: full-year data, 5 channels, trend breaks, and multiple seasonal peaks. It's designed to stress-test MMM models with realistic confounding patterns.
+
+### Key Differences from v1.0
+
+| Aspect | v1.0 | v1.1 |
+|--------|------|------|
+| Duration | 17 weeks | 52 weeks (full year) |
+| Channels | 3 (TV, Search, Social) | 5 (+ Display, Affiliate) |
+| Seasonality | 2 peaks (Halloween, BF) | 7 peaks (Valentine's → Christmas) |
+| Trends | Linear only | Linear with 2 breaks (weeks 21, 36) |
+| Noise | Constant | Heteroscedastic (scales with sales) |
+| Campaign Patterns | 2 campaigns | 7 campaigns, staggered |
+
+### 1. Extended Seasonality Pattern
+
+**Formula:**
+```
+seasonality(t) = {
+  0.4   if t ∈ {5-6}       (Valentine's Day)
+  0.6   if t ∈ {13-14}     (Easter)
+  0.8   if t ∈ {22}        (Prime Day)
+  -0.2  if t ∈ {28-29}     (Summer slump)
+  0.8   if t ∈ {42-43}     (Halloween)
+  1.2   if t ∈ {48-50}     (Black Friday/Cyber Monday)
+  1.5   if t ∈ {51}        (Christmas/New Year)
+  0.0   otherwise
+}
+```
+
+**Interpretation:**
+- Seven distinct seasonal events spanning the full year
+- Negative seasonality at weeks 28-29 (summer slump)
+- Overlapping peaks (BF weeks 48-50, Christmas week 51) = multicollinearity
+- Tests whether models can recover multiple, overlapping seasonality patterns
+
+### 2. Trend Breaks
+
+**Formula:**
+```
+Week 0-20:    growth = +5% per week (early year momentum)
+Week 21:      step change = +10% (new product launch)
+Weeks 22-35:  growth = +3% per week (post-launch plateau)
+Week 36:      step change = -5% (supply constraint / setback)
+Weeks 37-52:  growth = +7% per week (recovery trend)
+```
+
+**Interpretation:**
+- Real businesses have trend breaks from strategic events
+- Challenges: Model must determine whether sales changes from trend or campaign
+- Black Friday campaign (weeks 47-50) falls during recovery trend = confounding
+
+### 3. Five Channels with Heterogeneous Decay
+
+**Adstock Decay Rates:**
+```
+TV:        0.85 (brand effect, 3-4 week tail)
+Search:    0.30 (immediate, <1 week)
+Social:    0.50 (medium-term, 1-2 weeks)
+Display:   0.65 (mid-range, 2-3 weeks)
+Affiliate: 0.20 (most immediate, direct response)
+```
+
+**Effect Strengths (at saturation):**
+```
+TV:        1.0  (strongest channel)
+Search:    0.8
+Display:   0.7
+Social:    0.6
+Affiliate: 0.5  (weakest channel)
+```
+
+### 4. Campaign Spend Patterns
+
+Seven campaigns aligned with seasonal peaks:
+
+| Campaign | Weeks | TV | Search | Social | Display | Affiliate |
+|----------|-------|----|----|--------|---------|-----------|
+| Valentine's | 4-6 | 80 | 60 | 40 | 30 | 20 |
+| Easter | 12-14 | 40 | 30 | 120 | 50 | 20 |
+| Prime Day | 21-23 | 200 | 150 | 100 | 100 | 80 |
+| Summer | 27-29 | 50 | 40 | 50 | 150 | 30 |
+| Halloween | 41-43 | 120 | 100 | 60 | 40 | 20 |
+| Black Friday | 47-50 | 180 | 150 | 120 | 100 | 70 |
+| Christmas | 51-52 | 60 | 50 | 40 | 30 | 100 |
+
+**Key confounding:**
+- Valentine's (weeks 5-6) campaign overlaps with holiday (weeks 5-6) exactly
+- Black Friday campaign (weeks 47-50) partially overlaps holiday (weeks 48-50)
+- Multiple campaigns in high-sales periods (Prime Day, Christmas) = high collinearity
+
+### 5. Heteroscedastic Noise
+
+**Formula:**
+```
+noise(t) = N(0, σ(t))
+where σ(t) = 0.05 × baseline(t)
+```
+
+**Interpretation:**
+- Noise scales with baseline sales level (realistic)
+- Higher sales periods = higher absolute noise (but same relative %)
+- Tests whether models account for non-constant variance
+
+### Expected Regression Performance (v1.1)
+
+**Linear regression with adstock features:**
+- **R²:** 0.15-0.30 (much harder than v1.0!)
+- **Campaign MAPE:** 40-70% (high confounding)
+- **Seasonality MAPE:** 30-60% (hard to separate from trends)
+- **Baseline MAPE:** 20-50% (trend breaks create instability)
+
+**Why it's hard:**
+1. Collinearity: Multiple campaigns in high-sales periods
+2. Trend breaks: Breaks linearity assumption
+3. Seasonality-campaign overlap: Inherent confounding
+4. 5 channels: More parameters = higher variance
+5. Heteroscedastic noise: Violates constant variance assumption
+
+**Lessons:** Models need:
+- Seasonality constraints from prior years
+- Regularization to handle collinearity
+- Non-linear approaches (Bayesian, state-space)
+- Proper treatment of trend breaks
+
+---
+
 ## Reproducibility & Customization
 
 ### Seed Control
