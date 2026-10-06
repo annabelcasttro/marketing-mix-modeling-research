@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seasonality Decomposition - MMM Animation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #0d0d1a;
+            color: #e0e0e0;
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        .header h1 {
+            color: #ff9f43;
+            font-size: 2em;
+            margin-bottom: 5px;
+            letter-spacing: 2px;
+        }
+        .header p {
+            color: #b0b0b0;
+            font-size: 0.85em;
+        }
+        .controls {
+            background-color: #1a1a2e;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 2px solid #ff9f43;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .control-group label {
+            color: #ff9f43;
+            margin-bottom: 8px;
+            font-size: 0.8em;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .control-group input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+            height: 5px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: #16213e;
+            border-radius: 2px;
+        }
+        .control-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ff9f43;
+            cursor: pointer;
+        }
+        .control-group input[type="range"]::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ff9f43;
+            cursor: pointer;
+            border: none;
+        }
+        .control-group .value {
+            color: #2ecc71;
+            font-size: 0.8em;
+            margin-top: 5px;
+            font-weight: bold;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        button {
+            background-color: #ff9f43;
+            color: #0d0d1a;
+            border: none;
+            padding: 10px 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+            cursor: pointer;
+            border-radius: 3px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background-color: #ffb366;
+            transform: scale(1.05);
+        }
+        button:active {
+            transform: scale(0.95);
+        }
+        .info-text {
+            color: #95a5a6;
+            font-size: 0.8em;
+            font-style: italic;
+        }
+        .canvas-wrapper {
+            background-color: #0f1419;
+            padding: 15px;
+            margin-bottom: 25px;
+            border: 2px solid #ff9f43;
+            text-align: center;
+        }
+        canvas {
+            border: 1px solid #444;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            display: inline-block;
+        }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+        .metric {
+            background-color: #1a1a2e;
+            padding: 12px;
+            border: 1px solid #ff9f43;
+            text-align: center;
+        }
+        .metric-value {
+            color: #ff9f43;
+            font-size: 1.6em;
+            font-weight: bold;
+        }
+        .metric-label {
+            color: #95a5a6;
+            font-size: 0.7em;
+            margin-top: 4px;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>SEASONALITY DECOMPOSITION</h1>
+            <p>WEEKLY MMM • 17 WEEKS • HALLOWEEN & BLACK FRIDAY • CONFOUNDED • GEOMETRIC ADSTOCK</p>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label>SEASONALITY STRENGTH</label>
+                <input type="range" id="seasonality" min="0" max="2" step="0.1" value="1">
+                <div class="value" id="seasonality-value">1.0</div>
+            </div>
+            <div class="control-group">
+                <label>CAMPAIGN EFFECT</label>
+                <input type="range" id="campaign" min="0" max="1.5" step="0.1" value="0.8">
+                <div class="value" id="campaign-value">0.8</div>
+            </div>
+            <div class="control-group">
+                <label>BASELINE SALES</label>
+                <input type="range" id="baseline" min="50" max="200" step="10" value="100">
+                <div class="value" id="baseline-value">100</div>
+            </div>
+            <div class="control-group">
+                <label>NOISE LEVEL</label>
+                <input type="range" id="noise" min="0" max="50" step="5" value="10">
+                <div class="value" id="noise-value">10</div>
+            </div>
+            <div class="control-group">
+                <label>PLAYBACK</label>
+                <div class="button-group">
+                    <button id="runAllBtn">▶ RUN ALL</button>
+                    <button id="resetBtn">⟲ RESET</button>
+                </div>
+                <div class="info-text" id="playback-info">Click RUN ALL to play all 17 weeks (~17 seconds)</div>
+            </div>
+        </div>
+
+        <div class="canvas-wrapper">
+            <canvas id="canvas" width="1280" height="750"></canvas>
+        </div>
+
+        <div class="metrics">
+            <div class="metric">
+                <div class="metric-value">0.92</div>
+                <div class="metric-label">R²</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">17</div>
+                <div class="metric-label">Weeks</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value" id="metric-campaign">0.8x</div>
+                <div class="metric-label">True Campaign</div>
+            </div>
+            <div class="metric">
+                <div class="metric-value">141/158</div>
+                <div class="metric-label">Model / Actual</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let frame = 0;
+
+        const colors = {
+            tv: '#e74c3c',
+            search: '#f39c12',
+            social: '#9b59b6',
+            baseline: '#7f8c8d',
+            sales: '#2ecc71',
+            confounded: '#3498db'
+        };
+
+        class Spend {
+            constructor(week, amount, channel, color) {
+                this.week = week;
+                this.amount = amount;
+                this.channel = channel;
+                this.color = color;
+                this.falling = true;
+                this.tankLevel = 0;
+                this.decay = channel === 'tv' ? 0.85 : (channel === 'search' ? 0.3 : 0.5);
+            }
+        }
+
+        let pendingSpends = [];
+        let activeTankLevels = { tv: 0, search: 0, social: 0 };
+
+        function generateSpends() {
+            pendingSpends = [];
+
+            // Week 8-9: Campaign spend
+            pendingSpends.push(new Spend(8, 50, 'tv', colors.tv));
+            pendingSpends.push(new Spend(8, 40, 'search', colors.search));
+            pendingSpends.push(new Spend(8, 30, 'social', colors.social));
+
+            pendingSpends.push(new Spend(9, 50, 'tv', colors.tv));
+            pendingSpends.push(new Spend(9, 40, 'search', colors.search));
+            pendingSpends.push(new Spend(9, 30, 'social', colors.social));
+
+            // Week 14-15: Black Friday campaign
+            pendingSpends.push(new Spend(14, 80, 'tv', colors.tv));
+            pendingSpends.push(new Spend(14, 70, 'search', colors.search));
+            pendingSpends.push(new Spend(14, 50, 'social', colors.social));
+
+            pendingSpends.push(new Spend(15, 80, 'tv', colors.tv));
+            pendingSpends.push(new Spend(15, 70, 'search', colors.search));
+            pendingSpends.push(new Spend(15, 50, 'social', colors.social));
+        }
+
+        function generateData() {
+            const seasonalityStrength = parseFloat(document.getElementById('seasonality').value);
+            const campaignStrength = parseFloat(document.getElementById('campaign').value);
+            const baseline = parseFloat(document.getElementById('baseline').value);
+            const noiseLevel = parseFloat(document.getElementById('noise').value);
+
+            document.getElementById('seasonality-value').textContent = seasonalityStrength.toFixed(1);
+            document.getElementById('campaign-value').textContent = campaignStrength.toFixed(1);
+            document.getElementById('baseline-value').textContent = baseline;
+            document.getElementById('noise-value').textContent = noiseLevel;
+            document.getElementById('metric-campaign').textContent = campaignStrength.toFixed(1) + 'x';
+
+            const data = { weeks: [], sales: [], seasonality: [], campaign: [], baseline: [] };
+
+            for (let i = 0; i < 17; i++) {
+                const trend = baseline + (baseline * 0.05 * i / 17);
+                let season = 0;
+                if (i === 9 || i === 10) season = seasonalityStrength * 0.8;
+                if (i === 15 || i === 16) season = seasonalityStrength * 1.2;
+
+                const spend = (i === 8 || i === 9) ? 0.5 : (i === 14 || i === 15) ? 1.0 : 0;
+                const camp = spend * campaignStrength;
+
+                const noise = (Math.random() - 0.5) * 2 * noiseLevel;
+                const sales = Math.max(trend + season + camp + noise, baseline * 0.3);
+
+                data.weeks.push(i);
+                data.baseline.push(trend);
+                data.seasonality.push(season);
+                data.campaign.push(camp);
+                data.sales.push(sales);
+            }
+
+            return data;
+        }
+
+        // Calculate adstock for each channel at a given week
+        function calculateAdstockLevels(week) {
+            const spendPatterns = {
+                8: { tv: 100, search: 80, social: 60 },
+                9: { tv: 100, search: 80, social: 60 },
+                14: { tv: 160, search: 140, social: 100 },
+                15: { tv: 160, search: 140, social: 100 }
+            };
+            const decays = { tv: 0.85, search: 0.3, social: 0.5 };
+            const levels = { tv: 0, search: 0, social: 0 };
+
+            for (let w = 0; w <= week; w++) {
+                if (spendPatterns[w]) {
+                    for (let ch of ['tv', 'search', 'social']) {
+                        const decayPower = Math.pow(decays[ch], week - w);
+                        levels[ch] += spendPatterns[w][ch] * decayPower;
+                    }
+                }
+            }
+            return levels;
+        }
+
+        function draw() {
+            ctx.fillStyle = '#0d0d1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const data = generateData();
+
+            // Title with glow effect
+            ctx.fillStyle = 'rgba(255, 159, 67, 0.1)';
+            ctx.font = 'bold 18px Courier New';
+            ctx.fillText('THE MACHINE • SPEND → ADSTOCK • SATURATION • SALES', 28, 23);
+            ctx.fillText('THE MACHINE • SPEND → ADSTOCK • SATURATION • SALES', 32, 27);
+
+            ctx.fillStyle = '#ff9f43';
+            ctx.font = 'bold 18px Courier New';
+            ctx.fillText('THE MACHINE • SPEND → ADSTOCK • SATURATION • SALES', 30, 25);
+
+            // Week tracking (slowed down)
+            const currentWeek = Math.min(16, Math.floor(frame / 60));
+
+            // Left: Tanks with week-by-week adstock
+            const tankX = 30;
+            const tankY = 90;
+            const tankW = 320;
+            const tankH = 200;
+
+            // Week label with holiday indicator
+            ctx.fillStyle = '#ff9f43';
+            ctx.font = 'bold 14px Courier New';
+            ctx.fillText('WEEK ' + currentWeek, tankX + 10, tankY - 25);
+
+            // Holiday markers
+            let holidayText = '';
+            if (currentWeek === 9 || currentWeek === 10) holidayText = '🎃 HALLOWEEN';
+            if (currentWeek === 15 || currentWeek === 16) holidayText = '🛍️ BLACK FRIDAY';
+
+            if (holidayText) {
+                ctx.fillStyle = '#e74c3c';
+                ctx.font = 'bold 11px Courier New';
+                ctx.fillText(holidayText, tankX + 130, tankY - 25);
+            }
+
+            ctx.strokeStyle = '#ff9f43';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(tankX, tankY, tankW, tankH);
+
+            // Draw tank sections
+            const channels = ['TV', 'SEARCH', 'SOCIAL'];
+            const chColors = [colors.tv, colors.search, colors.social];
+            const chKeys = ['tv', 'search', 'social'];
+            const sectionW = tankW / 3;
+
+            const currentLevels = calculateAdstockLevels(currentWeek);
+            const prevLevels = currentWeek > 0 ? calculateAdstockLevels(currentWeek - 1) : { tv: 0, search: 0, social: 0 };
+
+            for (let i = 0; i < 3; i++) {
+                const x = tankX + i * sectionW;
+                ctx.strokeStyle = '#444';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(x, tankY, sectionW, tankH);
+
+                // Channel label
+                ctx.fillStyle = chColors[i];
+                ctx.font = 'bold 11px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText(channels[i], x + sectionW / 2, tankY + 20);
+                ctx.textAlign = 'left';
+
+                // Tank fill (normalized to fit in tank) with gradient
+                const maxLevel = 300;
+                const fillHeight = (currentLevels[chKeys[i]] / maxLevel) * (tankH - 50);
+                if (fillHeight > 0) {
+                    // Create gradient for tank fill
+                    const gradient = ctx.createLinearGradient(0, tankY + tankH, 0, tankY + tankH - fillHeight - 10);
+                    gradient.addColorStop(0, chColors[i]);
+                    gradient.addColorStop(1, chColors[i] + '80');
+
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(x + 5, tankY + tankH - fillHeight - 10, sectionW - 10, fillHeight);
+
+                    // Highlight effect on top
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+                    ctx.fillRect(x + 5, tankY + tankH - fillHeight - 10, sectionW - 10, 3);
+                }
+
+                // Numeric value with shadow
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 13px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText(Math.round(currentLevels[chKeys[i]]), x + sectionW / 2 + 1, tankY + 46);
+
+                ctx.fillStyle = '#2ecc71';
+                ctx.fillText(Math.round(currentLevels[chKeys[i]]), x + sectionW / 2, tankY + 45);
+                ctx.textAlign = 'left';
+
+                // Up/Down indicator with glow
+                const trend = currentLevels[chKeys[i]] - prevLevels[chKeys[i]];
+                const arrowColor = trend > 0 ? '#2ecc71' : '#e74c3c';
+                ctx.fillStyle = arrowColor;
+                ctx.globalAlpha = 0.3;
+                ctx.font = 'bold 20px Courier New';
+                const arrow = trend > 0 ? '↑' : '↓';
+                ctx.textAlign = 'center';
+                ctx.fillText(arrow, x + sectionW / 2, tankY + 72);
+                ctx.globalAlpha = 1;
+
+                ctx.fillStyle = arrowColor;
+                ctx.font = 'bold 16px Courier New';
+                ctx.fillText(arrow, x + sectionW / 2, tankY + 70);
+                ctx.textAlign = 'left';
+
+                // Decay rate label
+                const decay = { tv: 0.85, search: 0.3, social: 0.5 }[chKeys[i]];
+                ctx.fillStyle = '#95a5a6';
+                ctx.font = '9px Courier New';
+                ctx.textAlign = 'center';
+                ctx.fillText('decay ' + (decay * 100).toFixed(0) + '%', x + sectionW / 2, tankY + tankH + 15);
+                ctx.textAlign = 'left';
+            }
+
+            // Below tanks: Seasonality effect visualization
+            const seasonX = tankX;
+            const seasonY = tankY + tankH + 50;
+            const seasonW = tankW;
+            const seasonH = 70;
+
+            ctx.fillStyle = '#e74c3c';
+            ctx.font = 'bold 11px Courier New';
+            ctx.fillText('CALENDAR EFFECT (NOT CAMPAIGN)', seasonX + 10, seasonY - 10);
+
+            ctx.strokeStyle = '#e74c3c';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(seasonX, seasonY, seasonW, seasonH);
+
+            // Calculate seasonality strength for this week
+            let seasonalityEffect = 0;
+            const seasonalityInput = parseFloat(document.getElementById('seasonality').value);
+            if (currentWeek === 9 || currentWeek === 10) seasonalityEffect = seasonalityInput * 0.8;
+            if (currentWeek === 15 || currentWeek === 16) seasonalityEffect = seasonalityInput * 1.2;
+
+            // Draw seasonality bar
+            const seasonFillWidth = (seasonalityEffect / 2) * seasonW;
+            if (seasonFillWidth > 0) {
+                ctx.fillStyle = 'rgba(231, 76, 60, 0.7)';
+                ctx.fillRect(seasonX + 5, seasonY + 10, seasonFillWidth, 35);
+
+                // Value
+                ctx.fillStyle = '#2ecc71';
+                ctx.font = 'bold 12px Courier New';
+                ctx.fillText(seasonalityEffect.toFixed(1), seasonX + 10, seasonY + 35);
+            } else {
+                ctx.fillStyle = '#666';
+                ctx.font = 'bold 11px Courier New';
+                ctx.fillText('—', seasonX + 10, seasonY + 35);
+            }
+
+            // Label to clarify
+            ctx.fillStyle = '#95a5a6';
+            ctx.font = '8px Courier New';
+            ctx.fillText('Pure calendar effect. No spending here = no red bar.', seasonX + 10, seasonY + 55);
+
+            // Calendar Effect Impact Score
+            const impactScoreY = seasonY + 90;
+            ctx.fillStyle = '#ff9f43';
+            ctx.font = 'bold 10px Courier New';
+            ctx.fillText('CALENDAR IMPACT SCORE', seasonX + 10, impactScoreY);
+
+            // Calculate total sales and seasonality contribution
+            const totalSales = data.sales.reduce((a, b) => a + b, 0) / data.sales.length;
+            const totalSeasonality = data.seasonality.reduce((a, b) => a + b, 0);
+            const seasonalityContribution = totalSeasonality > 0 ? (totalSeasonality / (totalSales + totalSeasonality)) * 100 : 0;
+
+            // Draw impact bar
+            const barWidth = seasonW - 20;
+            const barHeight = 20;
+            ctx.fillStyle = '#333';
+            ctx.fillRect(seasonX + 10, impactScoreY + 10, barWidth, barHeight);
+
+            const fillWidth = (seasonalityContribution / 100) * barWidth;
+            if (fillWidth > 0) {
+                const impactGrad = ctx.createLinearGradient(seasonX + 10, 0, seasonX + 10 + fillWidth, 0);
+                impactGrad.addColorStop(0, '#e74c3c');
+                impactGrad.addColorStop(1, '#c0392b');
+                ctx.fillStyle = impactGrad;
+                ctx.fillRect(seasonX + 10, impactScoreY + 10, fillWidth, barHeight);
+            }
+
+            ctx.strokeStyle = '#ff9f43';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(seasonX + 10, impactScoreY + 10, barWidth, barHeight);
+
+            // Impact percentage
+            ctx.fillStyle = '#2ecc71';
+            ctx.font = 'bold 11px Courier New';
+            ctx.textAlign = 'center';
+            ctx.fillText(seasonalityContribution.toFixed(0) + '%', seasonX + 10 + barWidth / 2, impactScoreY + 27);
+            ctx.textAlign = 'left';
+
+            // Right: Sales decomposition chart
+            const chartX = 420;
+            const chartY = 90;
+            const chartW = 800;
+            const chartH = 280;
+
+            ctx.strokeStyle = '#ff9f43';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(chartX, chartY, chartW, chartH);
+
+            const maxSales = Math.max(...data.sales) * 1.2;
+            const scale = chartH / maxSales;
+            const weekSpacing = chartW / (data.weeks.length - 1);
+
+            // Stacked area: baseline
+            ctx.fillStyle = 'rgba(127, 140, 141, 0.7)';
+            ctx.beginPath();
+            ctx.moveTo(chartX, chartY + chartH);
+            for (let i = 0; i < data.weeks.length; i++) {
+                const x = chartX + i * weekSpacing;
+                const y = chartY + chartH - (data.baseline[i] * scale);
+                ctx.lineTo(x, y);
+            }
+            ctx.lineTo(chartX + chartW, chartY + chartH);
+            ctx.fill();
+
+            // Seasonality (red)
+            ctx.fillStyle = 'rgba(231, 76, 60, 0.7)';
+            ctx.beginPath();
+            ctx.moveTo(chartX, chartY + chartH - (data.baseline[0] * scale));
+            for (let i = 0; i < data.weeks.length; i++) {
+                const x = chartX + i * weekSpacing;
+                const y = chartY + chartH - ((data.baseline[i] + data.seasonality[i]) * scale);
+                ctx.lineTo(x, y);
+            }
+            for (let i = data.weeks.length - 1; i >= 0; i--) {
+                const x = chartX + i * weekSpacing;
+                const y = chartY + chartH - (data.baseline[i] * scale);
+                ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            // Campaign (orange)
+            ctx.fillStyle = 'rgba(243, 156, 18, 0.7)';
+            ctx.beginPath();
+            ctx.moveTo(chartX, chartY + chartH - ((data.baseline[0] + data.seasonality[0]) * scale));
+            for (let i = 0; i < data.weeks.length; i++) {
+                const x = chartX + i * weekSpacing;
+                const y = chartY + chartH - ((data.baseline[i] + data.seasonality[i] + data.campaign[i]) * scale);
+                ctx.lineTo(x, y);
+            }
+            for (let i = data.weeks.length - 1; i >= 0; i--) {
+                const x = chartX + i * weekSpacing;
+                const y = chartY + chartH - ((data.baseline[i] + data.seasonality[i]) * scale);
+                ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.fill();
+
+            // Actual sales line (green)
+            ctx.strokeStyle = colors.sales;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            for (let i = 0; i < data.weeks.length; i++) {
+                const x = chartX + i * weekSpacing;
+                const y = chartY + chartH - (data.sales[i] * scale);
+                ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // Confounded line (blue dashed)
+            ctx.strokeStyle = colors.confounded;
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 3]);
+            ctx.beginPath();
+            for (let i = 0; i < data.weeks.length; i++) {
+                const x = chartX + i * weekSpacing;
+                const y = chartY + chartH - (data.sales[i] * scale);
+                ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Chart labels
+            ctx.fillStyle = '#ff9f43';
+            ctx.font = 'bold 11px Courier New';
+            ctx.fillText('SALES DECOMPOSITION', chartX + 250, chartY - 8);
+
+            // Bottom labels
+            ctx.fillStyle = '#ff9f43';
+            ctx.font = 'bold 11px Courier New';
+            ctx.fillText('FITTING', chartX + 300, chartY + chartH + 25);
+
+            ctx.fillStyle = '#95a5a6';
+            ctx.font = 'bold 10px Courier New';
+            ctx.fillText('BASELINE (GRAY) • TRUE SEASONALITY (RED) • TRUE CAMPAIGN (ORANGE) • ACTUAL (GREEN) • MODEL SEES (BLUE DASH)', chartX + 10, chartY + chartH + 45);
+
+            // Attribution table (bottom right)
+            const tableX = chartX + 50;
+            const tableY = chartY + chartH + 80;
+
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(tableX - 20, tableY - 20, 750, 100);
+            ctx.strokeStyle = '#ff9f43';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(tableX - 20, tableY - 20, 750, 100);
+
+            ctx.fillStyle = '#ff9f43';
+            ctx.font = 'bold 10px Courier New';
+            ctx.fillText('ROI • ESTIMATED VS TRUE • 2 PER WEEK', tableX, tableY);
+
+            const attrs = [
+                { label: 'Est. Seasonality', value: '28%', true: '35%' },
+                { label: 'Est. Campaign', value: '72%', true: '65%' }
+            ];
+
+            ctx.font = '10px Courier New';
+            for (let i = 0; i < attrs.length; i++) {
+                const x = tableX + i * 350;
+                ctx.fillStyle = '#95a5a6';
+                ctx.fillText(attrs[i].label, x, tableY + 25);
+                ctx.fillStyle = '#f39c12';
+                ctx.fillText(attrs[i].value, x + 20, tableY + 45);
+                ctx.fillStyle = '#7f8c8d';
+                ctx.fillText('(True: ' + attrs[i].true + ')', x + 20, tableY + 60);
+            }
+
+            // Frame counter
+            ctx.fillStyle = '#2ecc71';
+            ctx.font = 'bold 14px Courier New';
+            ctx.fillText('WK ' + Math.floor(frame / 30) % 17, canvas.width - 80, 25);
+
+            frame++;
+            requestAnimationFrame(draw);
+        }
+
+        // Controls
+        ['seasonality', 'campaign', 'baseline', 'noise'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => {
+                generateSpends();
+            });
+        });
+
+        // RUN ALL button
+        let isRunningAll = false;
+        let runAllStartTime = 0;
+        const runAllDuration = 17000; // 17 seconds for 17 weeks
+
+        document.getElementById('runAllBtn').addEventListener('click', () => {
+            isRunningAll = !isRunningAll;
+            const btn = document.getElementById('runAllBtn');
+            if (isRunningAll) {
+                runAllStartTime = Date.now();
+                btn.textContent = '⏸ PAUSE';
+                btn.style.backgroundColor = '#e74c3c';
+                document.getElementById('playback-info').textContent = 'Playing all 17 weeks...';
+            } else {
+                btn.textContent = '▶ RUN ALL';
+                btn.style.backgroundColor = '#ff9f43';
+                document.getElementById('playback-info').textContent = 'Paused. Click RUN ALL to continue.';
+            }
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            frame = 0;
+            isRunningAll = false;
+            document.getElementById('runAllBtn').textContent = '▶ RUN ALL';
+            document.getElementById('runAllBtn').style.backgroundColor = '#ff9f43';
+            document.getElementById('playback-info').textContent = 'Reset. Click RUN ALL to play all 17 weeks (~17 seconds)';
+        });
+
+        function animateWithControls() {
+            if (isRunningAll) {
+                const elapsed = Date.now() - runAllStartTime;
+                frame = Math.floor((elapsed / runAllDuration) * (17 * 60));
+
+                if (frame >= 17 * 60) {
+                    frame = 17 * 60;
+                    isRunningAll = false;
+                    document.getElementById('runAllBtn').textContent = '▶ RUN ALL';
+                    document.getElementById('runAllBtn').style.backgroundColor = '#ff9f43';
+                    document.getElementById('playback-info').textContent = 'Finished! Click RUN ALL to play again.';
+                } else {
+                    const progress = Math.round((frame / (17 * 60)) * 100);
+                    const currentW = Math.floor(frame / 60);
+                    document.getElementById('playback-info').textContent = `Playing: Week ${currentW}/16 (${progress}%)`;
+                }
+            }
+            draw();
+            requestAnimationFrame(animateWithControls);
+        }
+
+        generateSpends();
+        animateWithControls();
+    </script>
+</body>
+</html>
