@@ -157,8 +157,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>SEASONALITY DECOMPOSITION</h1>
-            <p>WEEKLY MMM • 17 WEEKS • HALLOWEEN & BLACK FRIDAY • CONFOUNDED • GEOMETRIC ADSTOCK</p>
+            <h1>SEASONALITY DECOMPOSITION — 52 WEEKS</h1>
+            <p>FULL YEAR MMM • MULTIPLE HOLIDAYS • CAMPAIGN OVERLAPS • CONFOUNDED • GEOMETRIC ADSTOCK</p>
         </div>
 
         <div class="controls">
@@ -183,12 +183,17 @@
                 <div class="value" id="noise-value">10</div>
             </div>
             <div class="control-group">
-                <label>PLAYBACK</label>
+                <label>PLAYBACK SPEED</label>
+                <input type="range" id="speedControl" min="0.5" max="4" step="0.5" value="1">
+                <div class="value" id="speed-value">1.0x</div>
+            </div>
+            <div class="control-group">
+                <label>CONTROLS</label>
                 <div class="button-group">
                     <button id="runAllBtn">▶ RUN ALL</button>
                     <button id="resetBtn">⟲ RESET</button>
                 </div>
-                <div class="info-text" id="playback-info">Click RUN ALL to play all 17 weeks (~17 seconds)</div>
+                <div class="info-text" id="playback-info">52 weeks • Adjust speed to control animation</div>
             </div>
         </div>
 
@@ -198,20 +203,20 @@
 
         <div class="metrics">
             <div class="metric">
-                <div class="metric-value">0.92</div>
-                <div class="metric-label">R²</div>
+                <div class="metric-value">0.87</div>
+                <div class="metric-label">R² (Fit)</div>
             </div>
             <div class="metric">
-                <div class="metric-value">17</div>
-                <div class="metric-label">Weeks</div>
+                <div class="metric-value">52</div>
+                <div class="metric-label">Weeks (Full Year)</div>
             </div>
             <div class="metric">
                 <div class="metric-value" id="metric-campaign">0.8x</div>
-                <div class="metric-label">True Campaign</div>
+                <div class="metric-label">Campaign Strength</div>
             </div>
             <div class="metric">
-                <div class="metric-value">141/158</div>
-                <div class="metric-label">Model / Actual</div>
+                <div class="metric-value">7 Peaks</div>
+                <div class="metric-label">Holiday Events</div>
             </div>
         </div>
     </div>
@@ -281,13 +286,50 @@
 
             const data = { weeks: [], sales: [], seasonality: [], campaign: [], baseline: [] };
 
-            for (let i = 0; i < 17; i++) {
-                const trend = baseline + (baseline * 0.05 * i / 17);
-                let season = 0;
-                if (i === 9 || i === 10) season = seasonalityStrength * 0.8;
-                if (i === 15 || i === 16) season = seasonalityStrength * 1.2;
+            // 52-week seasonality patterns
+            const seasonalityMap = {
+                5: 0.4,   // Valentine's
+                6: 0.4,
+                13: 0.6,  // Easter
+                14: 0.6,
+                22: 0.8,  // Prime Day
+                28: 0.2,  // Summer (negative)
+                29: 0.2,
+                42: 0.8,  // Halloween
+                43: 0.8,
+                48: 1.2,  // Black Friday
+                49: 1.2,
+                50: 1.2,
+                51: 1.5   // Christmas
+            };
 
-                const spend = (i === 8 || i === 9) ? 0.5 : (i === 14 || i === 15) ? 1.0 : 0;
+            // Campaign spend pattern (52 weeks)
+            const campaignMap = {
+                // Valentine's (Week 4-6)
+                4: 0.4, 5: 0.5, 6: 0.4,
+                // Easter (Week 12-14)
+                12: 0.4, 13: 0.6, 14: 0.5,
+                // Prime Day (Week 21-23)
+                21: 0.8, 22: 1.0, 23: 0.8,
+                // Summer (Week 27-29)
+                27: 0.3, 28: 0.4, 29: 0.3,
+                // Halloween (Week 41-43)
+                41: 0.5, 42: 0.7, 43: 0.5,
+                // Black Friday (Week 47-50)
+                47: 0.9, 48: 1.2, 49: 1.2, 50: 1.0,
+                // Christmas (Week 51-52)
+                51: 1.5, 52: 1.5
+            };
+
+            for (let i = 0; i < 52; i++) {
+                // Linear 5% growth over 52 weeks
+                const trend = baseline + (baseline * 0.05 * i / 52);
+
+                // Seasonality from map
+                const season = seasonalityMap[i] ? seasonalityStrength * seasonalityMap[i] : 0;
+
+                // Campaign from map
+                const spend = campaignMap[i] || 0;
                 const camp = spend * campaignStrength;
 
                 const noise = (Math.random() - 0.5) * 2 * noiseLevel;
@@ -334,15 +376,17 @@
             // Title with glow effect
             ctx.fillStyle = 'rgba(255, 159, 67, 0.1)';
             ctx.font = 'bold 18px Courier New';
-            ctx.fillText('THE MACHINE • SPEND → ADSTOCK • SATURATION • SALES', 28, 23);
-            ctx.fillText('THE MACHINE • SPEND → ADSTOCK • SATURATION • SALES', 32, 27);
+            ctx.fillText('THE MACHINE • SPEND → ADSTOCK • SATURATION • SALES (52 WEEKS)', 28, 23);
+            ctx.fillText('THE MACHINE • SPEND → ADSTOCK • SATURATION • SALES (52 WEEKS)', 32, 27);
 
             ctx.fillStyle = '#ff9f43';
             ctx.font = 'bold 18px Courier New';
-            ctx.fillText('THE MACHINE • SPEND → ADSTOCK • SATURATION • SALES', 30, 25);
+            ctx.fillText('THE MACHINE • SPEND → ADSTOCK • SATURATION • SALES (52 WEEKS)', 30, 25);
 
-            // Week tracking (slowed down)
-            const currentWeek = Math.min(16, Math.floor(frame / 60));
+            // Speed control: 1x, 2x, 4x
+            const speedControl = parseFloat(document.getElementById('speedControl')?.value || '1');
+            // Week tracking (adjustable speed)
+            const currentWeek = Math.min(51, Math.floor(frame / (60 / speedControl)));
 
             // Left: Tanks with week-by-week adstock
             const tankX = 30;
@@ -522,7 +566,7 @@
             ctx.fillText(seasonalityContribution.toFixed(0) + '%', seasonX + 10 + barWidth / 2, impactScoreY + 27);
             ctx.textAlign = 'left';
 
-            // Right: Sales decomposition chart
+            // Right: Sales decomposition chart (progressive reveal)
             const chartX = 420;
             const chartY = 90;
             const chartW = 800;
@@ -532,32 +576,34 @@
             ctx.lineWidth = 2;
             ctx.strokeRect(chartX, chartY, chartW, chartH);
 
-            const maxSales = Math.max(...data.sales) * 1.2;
+            // Dynamic max based on data shown so far
+            const visibleSales = data.sales.slice(0, currentWeek + 1);
+            const maxSales = Math.max(...visibleSales) * 1.2;
             const scale = chartH / maxSales;
-            const weekSpacing = chartW / (data.weeks.length - 1);
+            const weekSpacing = data.weeks.length > 1 ? chartW / (data.weeks.length - 1) : chartW;
 
-            // Stacked area: baseline
+            // Stacked area: baseline (only up to currentWeek)
             ctx.fillStyle = 'rgba(127, 140, 141, 0.7)';
             ctx.beginPath();
             ctx.moveTo(chartX, chartY + chartH);
-            for (let i = 0; i < data.weeks.length; i++) {
+            for (let i = 0; i <= currentWeek; i++) {
                 const x = chartX + i * weekSpacing;
                 const y = chartY + chartH - (data.baseline[i] * scale);
                 ctx.lineTo(x, y);
             }
-            ctx.lineTo(chartX + chartW, chartY + chartH);
+            ctx.lineTo(chartX + currentWeek * weekSpacing, chartY + chartH);
             ctx.fill();
 
-            // Seasonality (red)
+            // Seasonality (red) - only up to currentWeek
             ctx.fillStyle = 'rgba(231, 76, 60, 0.7)';
             ctx.beginPath();
             ctx.moveTo(chartX, chartY + chartH - (data.baseline[0] * scale));
-            for (let i = 0; i < data.weeks.length; i++) {
+            for (let i = 0; i <= currentWeek; i++) {
                 const x = chartX + i * weekSpacing;
                 const y = chartY + chartH - ((data.baseline[i] + data.seasonality[i]) * scale);
                 ctx.lineTo(x, y);
             }
-            for (let i = data.weeks.length - 1; i >= 0; i--) {
+            for (let i = currentWeek; i >= 0; i--) {
                 const x = chartX + i * weekSpacing;
                 const y = chartY + chartH - (data.baseline[i] * scale);
                 ctx.lineTo(x, y);
@@ -565,16 +611,16 @@
             ctx.closePath();
             ctx.fill();
 
-            // Campaign (orange)
+            // Campaign (orange) - only up to currentWeek
             ctx.fillStyle = 'rgba(243, 156, 18, 0.7)';
             ctx.beginPath();
             ctx.moveTo(chartX, chartY + chartH - ((data.baseline[0] + data.seasonality[0]) * scale));
-            for (let i = 0; i < data.weeks.length; i++) {
+            for (let i = 0; i <= currentWeek; i++) {
                 const x = chartX + i * weekSpacing;
                 const y = chartY + chartH - ((data.baseline[i] + data.seasonality[i] + data.campaign[i]) * scale);
                 ctx.lineTo(x, y);
             }
-            for (let i = data.weeks.length - 1; i >= 0; i--) {
+            for (let i = currentWeek; i >= 0; i--) {
                 const x = chartX + i * weekSpacing;
                 const y = chartY + chartH - ((data.baseline[i] + data.seasonality[i]) * scale);
                 ctx.lineTo(x, y);
@@ -582,23 +628,23 @@
             ctx.closePath();
             ctx.fill();
 
-            // Actual sales line (green)
+            // Actual sales line (green) - only up to currentWeek
             ctx.strokeStyle = colors.sales;
             ctx.lineWidth = 3;
             ctx.beginPath();
-            for (let i = 0; i < data.weeks.length; i++) {
+            for (let i = 0; i <= currentWeek; i++) {
                 const x = chartX + i * weekSpacing;
                 const y = chartY + chartH - (data.sales[i] * scale);
                 ctx.lineTo(x, y);
             }
             ctx.stroke();
 
-            // Confounded line (blue dashed)
+            // Confounded line (blue dashed) - only up to currentWeek
             ctx.strokeStyle = colors.confounded;
             ctx.lineWidth = 2;
             ctx.setLineDash([5, 3]);
             ctx.beginPath();
-            for (let i = 0; i < data.weeks.length; i++) {
+            for (let i = 0; i <= currentWeek; i++) {
                 const x = chartX + i * weekSpacing;
                 const y = chartY + chartH - (data.sales[i] * scale);
                 ctx.lineTo(x, y);
@@ -650,26 +696,36 @@
                 ctx.fillText('(True: ' + attrs[i].true + ')', x + 20, tableY + 60);
             }
 
-            // Frame counter
+            // Frame counter (52 weeks max)
+            const speedControl = parseFloat(document.getElementById('speedControl')?.value || '1');
+            const displayWeek = Math.min(51, Math.floor(frame / (60 / speedControl)));
             ctx.fillStyle = '#2ecc71';
             ctx.font = 'bold 14px Courier New';
-            ctx.fillText('WK ' + Math.floor(frame / 30) % 17, canvas.width - 80, 25);
+            ctx.fillText('WK ' + displayWeek, canvas.width - 80, 25);
 
             frame++;
             requestAnimationFrame(draw);
         }
 
         // Controls
-        ['seasonality', 'campaign', 'baseline', 'noise'].forEach(id => {
-            document.getElementById(id).addEventListener('input', () => {
-                generateSpends();
-            });
+        ['seasonality', 'campaign', 'baseline', 'noise', 'speedControl'].forEach(id => {
+            const elem = document.getElementById(id);
+            if (elem) {
+                elem.addEventListener('input', () => {
+                    if (id === 'speedControl') {
+                        const speedVal = parseFloat(elem.value);
+                        document.getElementById('speed-value').textContent = speedVal.toFixed(1) + 'x';
+                    } else {
+                        generateSpends();
+                    }
+                });
+            }
         });
 
         // RUN ALL button
         let isRunningAll = false;
         let runAllStartTime = 0;
-        const runAllDuration = 17000; // 17 seconds for 17 weeks
+        const runAllDuration = 52000; // 52 seconds for 52 weeks at 1x speed
 
         document.getElementById('runAllBtn').addEventListener('click', () => {
             isRunningAll = !isRunningAll;
