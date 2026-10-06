@@ -11,10 +11,12 @@ This repository provides **synthetic data where the true decomposition is known*
 ## What's Included
 
 ### Core Files
-- **`synthetic_mmm_dataset.py`** — Python generator for 17-week synthetic data with known decomposition
+- **`synthetic_mmm_dataset.py`** — Python generator supporting:
+  - **v1.0:** 17-week baseline (3 channels: TV, Search, Social)
+  - **v1.1:** 52-week realistic (5 channels: TV, Search, Social, Display, Affiliate)
 - **`mmm_synthetic_data.csv`** — Generated sample dataset (observables + ground truth columns)
 - **`mmm_ground_truth.json`** — Complete true decomposition (baseline, seasonality, adstock, campaign effects)
-- **`seasonality_mmm_animation.html`** — Interactive visualization showing week-by-week adstock decay and calendar effects
+- **`seasonality_mmm_animation.html`** — Interactive 52-week visualization with speed control and progressive chart reveal
 
 ## Key Features
 
@@ -40,28 +42,50 @@ effect = strength * (adstocked / (half_saturation + adstocked))
 
 ## Quick Start
 
-### Generate Your Own Dataset
+### Generate v1.0 Baseline Dataset (17 weeks, 3 channels)
 
 ```python
 from synthetic_mmm_dataset import SyntheticMMMDataset
 
 # Create generator
-dataset = SyntheticMMMDataset(n_weeks=17, seed=42)
+dataset = SyntheticMMMDataset(n_weeks=17, level="v1.0", seed=42)
 
 # Generate data with custom parameters
 df = dataset.generate(
     baseline=100,
     trend_rate=0.05,
     seasonality_strength=1.0,
-    campaign_strength=0.8,
-    tv_decay=0.85,
-    search_decay=0.3,
-    social_decay=0.5
+    campaign_strength=0.8
 )
 
 # Save outputs
-dataset.save_to_csv('my_data.csv')
-dataset.save_ground_truth('my_truth.json')
+dataset.save_to_csv('v1_0_data.csv')
+dataset.save_ground_truth('v1_0_truth.json')
+```
+
+### Generate v1.1 Realistic Dataset (52 weeks, 5 channels)
+
+```python
+from synthetic_mmm_dataset import SyntheticMMMDataset
+
+# Create generator for 52-week realistic scenario
+dataset = SyntheticMMMDataset(n_weeks=52, level="v1.1", seed=42)
+
+# Generate data (includes trend breaks, multiple seasonality, heteroscedastic noise)
+df = dataset.generate(
+    baseline=1000,
+    seasonality_strength=1.0,
+    campaign_strength=1.0,
+    noise_heteroscedastic=True
+)
+
+# Save outputs
+dataset.save_to_csv('v1_1_data.csv')
+dataset.save_ground_truth('v1_1_truth.json')
+
+# Returns DataFrame with 5 channels, ground truth for validation
+print(df.head())  # Includes tv_spend, search_spend, social_spend, display_spend, affiliate_spend
+print(dataset.get_ground_truth().keys())
 ```
 
 ### Validate Your MMM Model
